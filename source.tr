@@ -1,0 +1,7 @@
+<body>
+<ul id="list-ul">
+(block-start;type:foreach;source:data.csv)
+ <li><p>{0}</p><p>{1}<p/></li>
+(block-end)
+</ul>
+</body>
