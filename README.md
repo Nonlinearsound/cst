@@ -22,8 +22,12 @@ All parsed template definitions are processed and written to the output file.
 
 ### Template blocks
 
-Create a template file and pass it as an input file with the argument -i
+This is an example of a template file and to be passed as an input file with the argument -i
+Notice the definitions in brackets, like "store", "block-start" and "block-end". These are template block definitions that the parser and the template engine will use to replace them with content of the specified data csv file.
 
+Also there are template placeholder definitions like {{name}} specified. These are simple template definitions where the token is replaced with the value of the specified key.
+
+For simplicity, the key-value store and the data files for the template blocks are simple CSV files without headlines like you might have exported from applications like Excel or LibreOffice.
 ```
 (store;source:Example/keystore.csv)
 <body>
@@ -42,7 +46,7 @@ Create a template file and pass it as an input file with the argument -i
 </body>
 ```
 
-Here we want to use the template engine to create an HTML file that uses two csv files to create two different unsorted list definitions in the HTML source.
+In the following example we want to use the template engine to create an HTML file that uses two csv files to create two different unsorted list definitions in the HTML source.
 For that, we define two "foreach" blocks in the form of
 ```
 (block-start;type:foreach;source:\<datafile-path\>)
