@@ -6,7 +6,7 @@
  <h1>baz</h1>
  <li class="listitem-test"><p>pepe</p><p>yeehaa<p/></li>
  <h1>pepe</h1>
- <li class="listitem-test"><p>string</p><p>I am a cool data<p/></li>
+ <li class="listitem-test"><p>string</p><p>I am a data<p/></li>
  <h1>string</h1>
  <li class="listitem-test"><p>bla</p><p>blo<p/></li>
  <h1>bla</h1>
@@ -16,7 +16,7 @@
  <h1>343</h1>
  <li class="listitem-test"><p>test</p><p>test2<p/></li>
  <h1>test</h1>
- <li class="listitem-test"><p>end</p><p>end of the whole thing<p/></li>
+ <li class="listitem-test"><p>end</p><p>this is a longer string<p/></li>
  <h1>end</h1>
 </ul>
 
