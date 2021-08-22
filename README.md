@@ -9,7 +9,7 @@ Using cst, you just define a template file, choose certain comma seperated text 
 
 By this you can create XML or HTML files for your web services or web sites, configuraton files for all sorts of software, based on csv files that you either wrote byhand or exported, using some sort of software.
 
-Usage
+## Usage
 -----
 cst -i \<input filepath\> -o \<output filepath\> 
 
@@ -18,10 +18,11 @@ All needed data file paths are being defined in the template file itself in so c
 The input file defines the template for the output file.
 All parsed template definitions are processed and written to the output file.
 
-Example
------
+## Example
 
-Create a tempalte file and pass it as an input file with the argument -i
+### Template blocks
+
+Create a template file and pass it as an input file with the argument -i
 
 ```
 (store;source:Example/keystore.csv)
@@ -59,7 +60,7 @@ baz,test,name,walter
 ```
 and a template block definition like
 ```
-(block-start;type:foreach;source:Example/data.csv)
+(block-start;type:foreach;source:data.csv)
  <h2 id="{0}">{1}</h2>
  <p id="{2}">{3}</p>
 (block-end)
@@ -73,3 +74,25 @@ we will end up with an output file containing the lines
 ```
 You can create as many block as you wish and specifiy different data files for them so that you can out as many data as you like in the structured output text file.
 
+### Key-Value Templates
+
+In every line of your tempalte file you can define placeholders for keys that are defined in the key-value csv file, you specified as following:
+```
+(store;source:\<key-value-file-path\>)
+```
+Now, you can use that data by defining a placeholder like this
+```
+Some text line with the value of the key foo = {{foo}}.
+Another line where we will put the value of {{bar}} into the string.
+```
+Then, if we got this csv file as our key-value data file
+```
+foo,fred
+bar,walter
+```
+we will end up with these two lines in our output file
+```
+Some text line with the value of the key foo = fred.
+Another line where we will put the value of walter into the string.
+```
+You can use these placeholders everywhere in the source file. They can even be used inside block definitions. Have a look in the Example folder in the source.txt file.
