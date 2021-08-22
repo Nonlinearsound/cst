@@ -11,7 +11,7 @@ By this you can create XML or HTML files for your web services or web sites, con
 
 Usage:
 
-cst -i \<input filepath\> -o \<output filepath\> [-k \<key-value file path\>] [-v]
+cst -i \<input filepath\> -o \<output filepath\> 
 
 The program needs an input and an output file path.
 All needed data file paths are being defined in the template file itself in so called block definitions
