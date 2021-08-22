@@ -78,7 +78,7 @@ You can create as many block as you wish and specifiy different data files for t
 
 In every line of your tempalte file you can define placeholders for keys that are defined in the key-value csv file, you specified as following:
 ```
-(store;source:\<key-value-file-path\>)
+(store;source:<key-value-file-path>)
 ```
 Now, you can use that data by defining a placeholder like this
 ```
