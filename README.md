@@ -22,7 +22,7 @@ All parsed template definitions are processed and written to the output file.
 
 ### Template blocks
 
-This is an example of a template file and to be passed as an input file with the argument -i
+This is an example of a template file and to be passed as an input file with the argument -i.
 Notice the definitions in brackets, like "store", "block-start" and "block-end". These are template block definitions that the parser and the template engine will use to replace them with content of the specified data csv file.
 
 Also there are template placeholder definitions like {{name}} specified. These are simple template definitions where the token is replaced with the value of the specified key.
@@ -54,7 +54,7 @@ For that, we define two "foreach" blocks in the form of
  for instance {0} for the first column. Use as many columns you have in the data file.
 (block-end)
 ```
-"block-end" is importand to tell the templating parser that the block ends here.
+"block-end" is important to tell the templating parser that the block ends here.
 The template engine will then read in the specified data file and loop over its lines/rows. For every row it will loop over as many template lines are being defined in the template block and replace the placeholders with the content of the respective column of each line/row in the data file.
 
 If we have a data.csv file with the content
