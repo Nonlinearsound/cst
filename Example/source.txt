@@ -1,0 +1,15 @@
+(store;source:keystore.csv)
+<body>
+<ul id="list-{{name}}">
+(block-start;type:foreach;source:data.csv)
+ <li class="{{classname}}"><p>{0}</p><p>{1}<p/></li>
+ <h1>{0}</h1>
+(block-end)
+</ul>
+
+<ul id="list-{{name2}}">
+(block-start;type:foreach;source:data2.csv)
+ <li class="{{classname}}"><p>{0}</p><p>{1}<p/><span>{2}<span/></li>
+(block-end)
+</ul>
+</body>
