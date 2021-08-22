@@ -58,7 +58,7 @@ func main() {
 
 	c := color.New(color.FgWhite).Add(color.Bold)
 	flag.Usage = func() {
-		fmt.Println("cst - the command shell template parser\n")
+		fmt.Println("cst - the command shell template parser\n") // redundant newline ok
 		fmt.Println("   cst -i <input filepath> -o <output filepath> [-k <key-value file path>] [-v]\n")
 		c.Println("DESCRIPTION")
 		fmt.Println("cst is a command line template parser that uses comma seperated files (csv) as it's data source.")
