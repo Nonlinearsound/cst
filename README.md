@@ -1,5 +1,5 @@
 # cst
-**cst - the command shell template parser**
+**cst - a command shell template engine**
 
 cst is a command line template parser that uses comma seperated files (csv) as it's data source.
 It is being used to transform data, present in csv files, into structured text files, such as HTML, JSON, XML or yaml files or any other structured file format.
