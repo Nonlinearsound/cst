@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -49,12 +52,20 @@ func main() {
 	var outputFilePath string
 	var keyValuePath string
 	var verboseOutput bool
+	var outputBlocks bool
+	var jsonOutFile string
+	var jsonAsInput bool
+	var jsonInputPath string
 
 	// flags declaration using flag package
 	flag.StringVar(&inputFilePath, "i", "source.txt", "path of the input file. Default is source.txt")
 	flag.StringVar(&outputFilePath, "o", "output.txt", "path of the output file. Default is output.txt")
 	flag.StringVar(&keyValuePath, "k", "keyvalue.csv", "path of the key-value store file as comma seperated file with two columns. Default is keyvalue.csv")
 	flag.BoolVar(&verboseOutput, "v", false, "activate verbose output to console")
+	flag.BoolVar(&outputBlocks, "outputjson", false, "activate output block definitions as JSON")
+	flag.StringVar(&jsonOutFile, "jsonoutfile", "blocksDefinitions.json", "set the output filepath of the block definitions JSON file")
+	flag.BoolVar(&jsonAsInput, "jsoninput", false, "activate using a JSON block definition from a file as input source")
+	flag.StringVar(&jsonInputPath, "jsoninfile", "blocksDefinitions.json", "use this file path if -jsoninput is set")
 
 	c := color.New(color.FgWhite).Add(color.Bold)
 	flag.Usage = func() {
@@ -85,130 +96,150 @@ func main() {
 
 	// TODO: make all variables available through command arguments
 	//       verbosity
-	//		 save block definitions as JSON
-	//       read block definition from definition file or JSON file
 	//       Optional: token delimiter like '{{}}'
 
-	file, err := os.Open(inputFilePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	c.Println("[Parser] Start on input file: ", inputFilePath)
-
-	var currentBlock *Block
-	var rowIndex int32 = 0
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		fmt.Println("Scanning row index ", rowIndex)
-		row := scanner.Text()
-
-		if strings.HasPrefix(row, "(block-start;") {
-			if strings.HasSuffix(row, ")") { // found header of a block
-				if currentBlock != nil && currentBlock.completed == false {
-					fmt.Println("Error (block-start) without closing current block definition. Row[", rowIndex, "]:", row)
-					panic(1)
-				}
-
-				block := Block{}
-				block.Header = row
-
-				strHeader := strings.TrimPrefix(row, "(block-start;")
-				strHeader = strings.TrimSuffix(strHeader, ")")
-				fields := strings.Split(strHeader, ";")
-				for i, strField := range fields { // range over name:value definitions and add them to the structs Fields array
-					fieldTokens := strings.Split(strField, ":")
-					if len(fieldTokens) == 2 {
-						field := Field{Name: fieldTokens[0], Value: fieldTokens[1]}
-						if field.Name == "source" {
-							block.Source = field.Value
-						} else if field.Name == "type" {
-							block.Type = field.Value
-						}
-						block.Fields = append(block.Fields, field)
-					} else {
-						fmt.Println("Error in block header definition. Cannot read field definition, field index [", i, "] Row[", rowIndex, "]:", row)
-						panic(1)
-					}
-				}
-				blocks = append(blocks, block)
-				currentBlock = &blocks[len(blocks)-1]
-			} else {
-				// error in defining a block header, report error and panic
-				fmt.Println("Error in defining a blocks header. Row[", rowIndex, "]:", row)
-				panic(1)
-			}
-		} else if strings.Compare(row, "(block-end)") == 0 { // found block-end
-			if currentBlock != nil {
-				currentBlock.completed = true
-				PrintBlock(currentBlock)
-				currentBlock = nil
-			} else {
-				fmt.Println("Error (block-end) without (block-start). Row[", rowIndex, "]:", row)
-				panic(1)
-			}
-		} else if strings.HasPrefix(row, "(store;") {
-			if strings.HasSuffix(row, ")") {
-				if currentBlock != nil && currentBlock.completed == false {
-					fmt.Println("Error (store) definition started without closing current block definition. Row[", rowIndex, "]:", row)
-					panic(1)
-				}
-				// key-value store definition found
-				block := Block{}
-				block.Header = row
-				block.Type = "store"
-
-				strHeader := strings.TrimPrefix(row, "(store;") // Todo: DUPLICATE CODE - MAKE FUNCTION!!
-				strHeader = strings.TrimSuffix(strHeader, ")")
-				fields := strings.Split(strHeader, ";")
-				for i, strField := range fields { // range over name:value definitions and add them to the structs Fields array
-					fieldTokens := strings.Split(strField, ":")
-					if len(fieldTokens) == 2 {
-						field := Field{Name: fieldTokens[0], Value: fieldTokens[1]}
-						if field.Name == "source" {
-							block.Source = field.Value
-						}
-						block.Fields = append(block.Fields, field)
-					} else {
-						fmt.Println("Error in block header definition. Cannot read field definition, field index [", i, "] Row[", rowIndex, "]:", row)
-						panic(1)
-					}
-				}
-				blocks = append(blocks, block)
-				PrintBlock(&block)
-				currentBlock = nil
-				// finished with store block
-			} else {
-				fmt.Println("Error (store) definition started but not closed. Closing bracket is needed! Row[", rowIndex, "]:", row)
-				panic(1)
-			}
-		} else {
-			// anything else is a template definition of the block
-			// it will be added to the Rows array of the currentBlock
-			if currentBlock == nil {
-				block := Block{}
-				block.Rows = append(block.Rows, row)
-				block.Type = "string"
-				block.completed = true
-				blocks = append(blocks, block)
-				currentBlock = &blocks[len(blocks)-1]
-				PrintBlock(currentBlock)
-				currentBlock = nil
-			} else {
-				currentBlock.Rows = append(currentBlock.Rows, row)
-			}
+	if !jsonAsInput {
+		// the blocks structure will be created using the parser
+		file, err := os.Open(inputFilePath)
+		if err != nil {
+			log.Fatal(err)
 		}
-		rowIndex++
+		defer file.Close()
+		c.Println("[Parser] Start on input file: ", inputFilePath)
+
+		var currentBlock *Block
+		var rowIndex int32 = 0
+		scanner := bufio.NewScanner(file)
+		// optionally, resize scanner's capacity for lines over 64K, see next example
+		for scanner.Scan() {
+			fmt.Println("Scanning row index ", rowIndex)
+			row := scanner.Text()
+
+			if strings.HasPrefix(row, "(block-start;") {
+				if strings.HasSuffix(row, ")") { // found header of a block
+					if currentBlock != nil && currentBlock.completed == false {
+						fmt.Println("Error (block-start) without closing current block definition. Row[", rowIndex, "]:", row)
+						panic(1)
+					}
+
+					block := Block{}
+					block.Header = row
+
+					strHeader := strings.TrimPrefix(row, "(block-start;")
+					strHeader = strings.TrimSuffix(strHeader, ")")
+					fields := strings.Split(strHeader, ";")
+					for i, strField := range fields { // range over name:value definitions and add them to the structs Fields array
+						fieldTokens := strings.Split(strField, ":")
+						if len(fieldTokens) == 2 {
+							field := Field{Name: fieldTokens[0], Value: fieldTokens[1]}
+							if field.Name == "source" {
+								block.Source = field.Value
+							} else if field.Name == "type" {
+								block.Type = field.Value
+							}
+							block.Fields = append(block.Fields, field)
+						} else {
+							fmt.Println("Error in block header definition. Cannot read field definition, field index [", i, "] Row[", rowIndex, "]:", row)
+							panic(1)
+						}
+					}
+					blocks = append(blocks, block)
+					currentBlock = &blocks[len(blocks)-1]
+				} else {
+					// error in defining a block header, report error and panic
+					fmt.Println("Error in defining a blocks header. Row[", rowIndex, "]:", row)
+					panic(1)
+				}
+			} else if strings.Compare(row, "(block-end)") == 0 { // found block-end
+				if currentBlock != nil {
+					currentBlock.completed = true
+					PrintBlock(currentBlock)
+					currentBlock = nil
+				} else {
+					fmt.Println("Error (block-end) without (block-start). Row[", rowIndex, "]:", row)
+					panic(1)
+				}
+			} else if strings.HasPrefix(row, "(store;") {
+				if strings.HasSuffix(row, ")") {
+					if currentBlock != nil && currentBlock.completed == false {
+						fmt.Println("Error (store) definition started without closing current block definition. Row[", rowIndex, "]:", row)
+						panic(1)
+					}
+					// key-value store definition found
+					block := Block{}
+					block.Header = row
+					block.Type = "store"
+
+					strHeader := strings.TrimPrefix(row, "(store;") // Todo: DUPLICATE CODE - MAKE FUNCTION!!
+					strHeader = strings.TrimSuffix(strHeader, ")")
+					fields := strings.Split(strHeader, ";")
+					for i, strField := range fields { // range over name:value definitions and add them to the structs Fields array
+						fieldTokens := strings.Split(strField, ":")
+						if len(fieldTokens) == 2 {
+							field := Field{Name: fieldTokens[0], Value: fieldTokens[1]}
+							if field.Name == "source" {
+								block.Source = field.Value
+							}
+							block.Fields = append(block.Fields, field)
+						} else {
+							fmt.Println("Error in block header definition. Cannot read field definition, field index [", i, "] Row[", rowIndex, "]:", row)
+							panic(1)
+						}
+					}
+					blocks = append(blocks, block)
+					PrintBlock(&block)
+					currentBlock = nil
+					// finished with store block
+				} else {
+					fmt.Println("Error (store) definition started but not closed. Closing bracket is needed! Row[", rowIndex, "]:", row)
+					panic(1)
+				}
+			} else {
+				// anything else is a template definition of the block
+				// it will be added to the Rows array of the currentBlock
+				if currentBlock == nil {
+					block := Block{}
+					block.Rows = append(block.Rows, row)
+					block.Type = "string"
+					block.completed = true
+					blocks = append(blocks, block)
+					currentBlock = &blocks[len(blocks)-1]
+					PrintBlock(currentBlock)
+					currentBlock = nil
+				} else {
+					currentBlock.Rows = append(currentBlock.Rows, row)
+				}
+			}
+			rowIndex++
+		}
+		file.Close()
+		c.Println("[Parser] Done\n")
+
+		// write the blocks definition structure out to a JSON file for further use
+		if outputBlocks {
+
+			var buffer bytes.Buffer
+			e := json.NewEncoder(&buffer)
+			e.SetEscapeHTML(false)
+			e.SetIndent("", " ")
+			e.Encode(blocks)
+
+			_ = ioutil.WriteFile(jsonOutFile, buffer.Bytes(), 0644)
+		}
+
+	} else {
+		// the blocks structure will be created using unmarshalling JSON from a file
+		jsonInputBuffer, err := ioutil.ReadFile(jsonInputPath)
+		if err != nil {
+			fmt.Println("Error while reading JSON file ", jsonInputPath)
+			os.Exit(-1)
+		}
+		err = json.Unmarshal(jsonInputBuffer, &blocks)
+		if err != nil {
+			fmt.Println("Error while unmarshalling JSON block definition from ", jsonInputPath)
+			os.Exit(-1)
+		}
 	}
-	file.Close()
-	c.Println("[Parser] Done\n")
-
-	// TODO: Save all blocks in a JSON file
-	//       Add the possibility to read back that JSON so that there is an option to create blocks from a JSON definition
-
-	// file, _ := json.MarshalIndent(blocks, "", " ")
-	// _ = ioutil.WriteFile("test.json", file, 0644)
 
 	// Now loop over the blocks and work them out
 	// write into a buffer that then is going to be appended to an output file
