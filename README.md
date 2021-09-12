@@ -106,11 +106,11 @@ You can use these placeholders everywhere in the source file. They can even be u
 JSON is a structured data format that is being supported by almost all software that deals with transforming and/or transferring data. If you want to use JSON for defining the blocks, you can use the parser to parse the course file and export the block structure as JSON. You can then use that structure to create ana adaptation of that definition or create your very own definition for the templating engine to be used as input.
 
 You can export the parsed block definitions as JSON to a file using the argument -outputjson. The JSON data is written to ./blocksDefinitions.json by default. If you want to write to a different path, use the -jsonoutfile argument. Once done or written by hand, you can use such JSON file as the input source for your block definitions using the -jsoninput argument. 
-
+```
 cst -i ./source.txt -outputjson -jsonoutfile=./json-definitions.json
-
+```
 will create the JSON file json-definitions.json in the same directory as cst itself resides. 
-
+```
 cst -inputjson -jsoninput=./json-definitions.json
-
+```
 then reads that JSON file and creates the block definitions out of that and uses it for the templating engine.
