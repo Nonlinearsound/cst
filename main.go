@@ -102,17 +102,22 @@ func main() {
 		// the blocks structure will be created using the parser
 		file, err := os.Open(inputFilePath)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("Error opening source file", inputFilePath, " Error Description: ", err)
+			os.Exit(1)
 		}
 		defer file.Close()
-		c.Println("[Parser] Start on input file: ", inputFilePath)
+		if verboseOutput {
+			c.Println("[Parser] Start on input file: ", inputFilePath)
+		}
 
 		var currentBlock *Block
 		var rowIndex int32 = 0
 		scanner := bufio.NewScanner(file)
 		// optionally, resize scanner's capacity for lines over 64K, see next example
 		for scanner.Scan() {
-			fmt.Println("Scanning row index ", rowIndex)
+			if verboseOutput {
+				fmt.Println("Scanning row index ", rowIndex)
+			}
 			row := scanner.Text()
 
 			if strings.HasPrefix(row, "(block-start;") {
@@ -153,7 +158,9 @@ func main() {
 			} else if strings.Compare(row, "(block-end)") == 0 { // found block-end
 				if currentBlock != nil {
 					currentBlock.completed = true
-					PrintBlock(currentBlock)
+					if verboseOutput {
+						PrintBlock(currentBlock)
+					}
 					currentBlock = nil
 				} else {
 					fmt.Println("Error (block-end) without (block-start). Row[", rowIndex, "]:", row)
@@ -187,7 +194,9 @@ func main() {
 						}
 					}
 					blocks = append(blocks, block)
-					PrintBlock(&block)
+					if verboseOutput {
+						PrintBlock(&block)
+					}
 					currentBlock = nil
 					// finished with store block
 				} else {
@@ -204,7 +213,9 @@ func main() {
 					block.completed = true
 					blocks = append(blocks, block)
 					currentBlock = &blocks[len(blocks)-1]
-					PrintBlock(currentBlock)
+					if verboseOutput {
+						PrintBlock(currentBlock)
+					}
 					currentBlock = nil
 				} else {
 					currentBlock.Rows = append(currentBlock.Rows, row)
@@ -213,7 +224,9 @@ func main() {
 			rowIndex++
 		}
 		file.Close()
-		c.Println("[Parser] Done\n")
+		if verboseOutput {
+			c.Println("[Parser] Done\n")
+		}
 
 		// write the blocks definition structure out to a JSON file for further use
 		if outputBlocks {
@@ -232,12 +245,12 @@ func main() {
 		jsonInputBuffer, err := ioutil.ReadFile(jsonInputPath)
 		if err != nil {
 			fmt.Println("Error while reading JSON file ", jsonInputPath)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 		err = json.Unmarshal(jsonInputBuffer, &blocks)
 		if err != nil {
 			fmt.Println("Error while unmarshalling JSON block definition from ", jsonInputPath)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 	}
 
@@ -249,11 +262,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	c.Println("[Template Engine] Start on output file: ", outputFilePath)
+	if verboseOutput {
+		c.Println("[Template Engine] Start on output file: ", outputFilePath)
+	}
 
 	for i := 0; i < len(blocks); i++ {
 		// verbose output
-		fmt.Print("Parsing block #", i, " type=", blocks[i].Type, " rows=", blocks[i].Rows)
+		if verboseOutput {
+			fmt.Print("Parsing block #", i, " type=", blocks[i].Type, " rows=", blocks[i].Rows)
+		}
 
 		if blocks[i].Type == "string" {
 			// 1.) basic string from row in source file
@@ -269,7 +286,9 @@ func main() {
 			}
 
 			outputFile.WriteString(outputStr)
-			fmt.Println(" -> written to output file.")
+			if verboseOutput {
+				fmt.Println(" -> written to output file.")
+			}
 		} else if blocks[i].Type == "store" {
 			// key-store definition
 			// read the csv file and use it as a key value store for all tokens
@@ -291,7 +310,9 @@ func main() {
 				// key value store is present in the variable keyValueStore
 
 				// verbose output
-				fmt.Println(" -> Key-Value store successfully read: ", keyValueStore)
+				if verboseOutput {
+					fmt.Println(" -> Key-Value store successfully read: ", keyValueStore)
+				}
 			} else {
 				fmt.Println("Error: Cannot read key value store fields as the source definition is not set. Check the (store ..) definition in the defintiion file..")
 				panic(1)
@@ -300,7 +321,9 @@ func main() {
 		} else if blocks[i].Type == "foreach" {
 			// foreach block definition
 			// 1.) open source file
-			fmt.Println("")
+			if verboseOutput {
+				fmt.Println("")
+			}
 
 			block := &blocks[i]
 			if block.Source != "" {
@@ -331,7 +354,9 @@ func main() {
 							outputStr = strings.Replace(outputStr, token, column, -1) // replace {index} with the column nr=index
 							if indexColumn == (len(record) - 1) {
 								// verbose output
-								fmt.Println("   Replacing for record #", recordIndex, " with record='", record, "' in row #", rowIndex, "='"+blockRow, " output='", outputStr, "'")
+								if verboseOutput {
+									fmt.Println("   Replacing for record #", recordIndex, " with record='", record, "' in row #", rowIndex, "='"+blockRow, " output='", outputStr, "'")
+								}
 								// last column, add newline character
 								outputStr = outputStr + "\n"
 							}
@@ -350,7 +375,9 @@ func main() {
 						outputFile.WriteString(outputStr)
 					}
 				}
-				fmt.Println("   -> written to output file.")
+				if verboseOutput {
+					fmt.Println("   -> written to output file.")
+				}
 				sourceFile.Close()
 			} else {
 				fmt.Println("Error: Foreach block does not have a source definition. Please add the source of the csv file in the \"source\" field. Definition:", block.Fields)
